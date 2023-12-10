@@ -658,7 +658,7 @@ class CFiniteSequence(FieldElement,
                 return []
             start = key.start - self._off
             stop = key.stop - self._off
-            sl = [0] * (max(0, -start) - max(0, -stop))
+            zeros = [0] * (max(0, -start) - max(0, -stop))
             den = self.denominator()
             num = self.numerator()
             if self._off >= 0:
@@ -687,15 +687,15 @@ class CFiniteSequence(FieldElement,
             stop  = max(0, stop)
             u = aux(start, den)
             u += x**d * nextd(u)
-            sl += (u * num).list()[d-1:2*d]
+            sl = (u * num).list()[d-1:2*d]
             num = P(sl[-d:])
             while len(sl) < stop - start:
                 num = nextd(num)
                 sl += num.list()
             if start <= quo.degree():
-                for i in range(min(quo.degree() - start + 1, stop-start)):
-                    sl[i] += quo[start+i]
-            return sl[:stop-start]
+                for i in range(min(quo.degree()+1, stop - start)):
+                    sl[i] += quo[i]
+            return zeros + sl[:stop - start]
         elif isinstance(key, Integral):
             n = key - self._off
             if n < 0:
