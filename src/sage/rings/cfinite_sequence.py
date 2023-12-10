@@ -654,8 +654,48 @@ class CFiniteSequence(FieldElement,
         - [BM2021]_
         """
         if isinstance(key, slice):
-            m = max(key.start, key.stop)
-            return [self[ii] for ii in range(*key.indices(m + 1))]
+            if key.start >= key.stop:
+                return []
+            start = key.start - self._off
+            stop = key.stop - self._off
+            sl = [0] * (max(0, -start) - max(0, -stop))
+            den = self.denominator()
+            num = self.numerator()
+            if self._off >= 0:
+                num = num.shift(-self._off)
+            else:
+                den = den.shift(self._off)
+            (quo, num) = num.quo_rem(den)
+            d = den.degree()
+            P = self.parent().polynomial_ring()
+            x = P.gen()
+            def aux(n, den):
+                if n == 0:
+                    return x**(d-1) / den[0]
+                nden = den(-x)
+                den2 = P((den * nden).list()[::2])
+                w = aux(n // 2, den2)
+                if n % 2 == 0:
+                    nden *= x
+                return P((w(x**2) * nden).list()[d:2*d])
+            deninv = den.inverse_series_trunc(d)
+            def nextd(u):
+                s = u * den
+                t = -P(s.list()[d:2*d])
+                return t.multiplication_trunc(deninv, d)
+            start = max(0, start)
+            stop  = max(0, stop)
+            u = aux(start, den)
+            u += x**d * nextd(u)
+            sl += (u * num).list()[d-1:2*d]
+            num = P(sl[-d:])
+            while len(sl) < stop - start:
+                num = nextd(num)
+                sl += num.list()
+            if start <= quo.degree():
+                for i in range(min(quo.degree() - start + 1, stop-start)):
+                    sl[i] += quo[start+i]
+            return sl[:stop-start]
         elif isinstance(key, Integral):
             n = key - self._off
             if n < 0:
